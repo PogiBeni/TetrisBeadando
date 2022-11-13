@@ -8,7 +8,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GRAY = (128, 128, 128)
 
-size = (400, 500)
+size = (350, 500)
 screen = pygame.display.set_mode(size)
 
 pygame.display.set_caption("Tetris")
@@ -58,7 +58,7 @@ while not vege:
 
     for i in range(jatek.magassag):
         for j in range(jatek.szelesseg):
-            pygame.draw.rect(screen, WHITE, [jatek.x + jatek.zoom * j, jatek.y + jatek.zoom * i, jatek.zoom, jatek.zoom], 1)
+            pygame.draw.rect(screen, BLACK, [jatek.x + jatek.zoom * j, jatek.y + jatek.zoom * i, jatek.zoom, jatek.zoom], 1)
             if jatek.mezo[i][j] > 0:
                 pygame.draw.rect(screen, o.szinek[jatek.mezo[i][j]],
                                  [jatek.x + jatek.zoom * j + 1, jatek.y + jatek.zoom * i + 1, jatek.zoom - 2, jatek.zoom - 1])
