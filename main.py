@@ -1,90 +1,144 @@
 import pygame
-import osztalyok as o
+from copy import deepcopy
+from random import choice, randrange
+
+############################################
+# A játékmező 10 * 50 pixel Széles és 20 * 50 pixel magas lesz
+Sz,M = 10,20
+Csempe = 45
+GAME_RES = Sz * Csempe, M * Csempe
+############################################
+FPS = 60
 
 pygame.init()
 
-# Define some colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GRAY = (128, 128, 128)
+pygame.display.set_caption('Tetris')
+############################################
+#Ez az ablak ami megnyílik egy változó ként
+GAME = pygame.display.set_mode(GAME_RES) 
+###########################################
+clock = pygame.time.Clock()
 
-size = (350, 500)
-screen = pygame.display.set_mode(size)
 
-pygame.display.set_caption("Tetris")
+FigurakKoordinatai = [  [(-1, 0), (-2, 0), (0, 0), (1, 0)],
+                        [(0, -1), (-1, -1), (-1, 0), (0, 0)],
+                        [(-1, 0), (-1, 1), (0, 0), (0, -1)],
+                        [(0, 0), (-1, 0), (0, 1), (-1, -1)],
+                        [(0, 0), (0, -1), (0, 1), (-1, -1)],
+                        [(0, 0), (0, -1), (0, 1), (1, -1)],
+                        [(0, 0), (0, -1), (0, 1), (-1, 0)]]
 
-# Loop until the user clicks the close button.
-vege = False
-ora = pygame.time.Clock()
-fps = 25
-jatek = o.Tetris(20, 10)
-szamlalo = 0
+Figurak = [[pygame.Rect(x + Sz // 2, y + 1, 1, 1) for x, y in FiguraHelyzet] for FiguraHelyzet in FigurakKoordinatai]
+FiguraNegyzet = pygame.Rect(0,0, Csempe - 2, Csempe - 2)
+Mezo = [[0 for i in range(Sz)] for j in range (M)]
+animSzam, animSebesseg, animLimit = 0 ,8, 2000
+Figura =  deepcopy(choice(Figurak))
 
-leNyomas = False
 
-while not vege:
-    if jatek.alak is None:
-        jatek.ujAlak()
-    szamlalo += 1
-    if szamlalo > 100000:
-        szamlalo = 0
+Pont = 0
+getColor = lambda : (randrange(30,256), randrange(30,256), randrange(30,256) )
+color = getColor()
 
-    if szamlalo % (fps // jatek.level // 2) == 0 or leNyomas:
-        if jatek.state == "start":
-            jatek.lefele()
 
+#A grid létrehozása változóként, (x = oszop, y = sor, Szelesség, Magasság)
+grid = [pygame.Rect(x * Csempe, y * Csempe, Csempe, Csempe) for x in range(Sz) for y in range(M)]   
+
+def hitboxChech():
+    if Figura[i].x < 0 or Figura[i].x > Sz - 1:
+        return False
+    elif Figura[i].y > M - 1 or Mezo[Figura[i].y][Figura[i].x]:
+        return False
+    return True
+
+
+while True:
+    mozgasX, forgass = 0, False
+    GAME.fill(pygame.Color('black'))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            vege = True
+            exit()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                jatek.Forgat()
-            if event.key == pygame.K_DOWN:
-                leNyomas = True
             if event.key == pygame.K_LEFT:
-                jatek.oldalra(-1)
-            if event.key == pygame.K_RIGHT:
-                jatek.oldalra(1)
-            if event.key == pygame.K_SPACE:
-                jatek.ugras()
-            if event.key == pygame.K_ESCAPE:
-                jatek.__init__(20, 10)
-
-    if event.type == pygame.KEYUP:
-            if event.key == pygame.K_DOWN:
-                leNyomas = False
-
-    screen.fill(GRAY)
-
-    for i in range(jatek.magassag):
-        for j in range(jatek.szelesseg):
-            pygame.draw.rect(screen, BLACK, [jatek.x + jatek.zoom * j, jatek.y + jatek.zoom * i, jatek.zoom, jatek.zoom], 1)
-            if jatek.mezo[i][j] > 0:
-                pygame.draw.rect(screen, o.szinek[jatek.mezo[i][j]],
-                                 [jatek.x + jatek.zoom * j + 1, jatek.y + jatek.zoom * i + 1, jatek.zoom - 2, jatek.zoom - 1])
-
-    if jatek.alak is not None:
+                mozgasX = -1
+            elif event.key == pygame.K_RIGHT:
+                mozgasX = 1
+            elif event.key == pygame.K_DOWN:
+                animLimit = 100 #gygorsab lesz az animacio
+            elif event.key == pygame.K_UP:
+                forgass = True # Forgatas
+    # X tengelyen mozgás
+    regi_Figura = deepcopy(Figura)
+    for i in range(4):
+        Figura[i].x += mozgasX
+        if not hitboxChech():
+            Figura = deepcopy(regi_Figura)
+            break
+    # Y tengely mozgás
+    animSzam += animSebesseg
+    if animSzam > animLimit:
+        animSzam = 0
+        regi_Figura = deepcopy(Figura)
         for i in range(4):
-            for j in range(4):
-                p = i * 4 + j
-                if p in jatek.alak.kep():
-                    pygame.draw.rect(screen, o.szinek[jatek.alak.szin],
-                                     [jatek.x + jatek.zoom * (j + jatek.alak.x) + 1,
-                                      jatek.y + jatek.zoom * (i + jatek.alak.y) + 1,
-                                      jatek.zoom - 2, jatek.zoom - 2])
+            Figura[i].y += 1
+            if not hitboxChech():
+                for i in range(4):
+                   Mezo[regi_Figura[i].y][regi_Figura[i].x] = color
+                color = getColor()
+                Figura = deepcopy(choice(Figurak)) # uj random figurat felrak
+                animLimit = 2000
+                break
 
-    font = pygame.font.SysFont('Calibri', 25, True, False)
-    font1 = pygame.font.SysFont('Calibri', 65, True, False)
-    text = font.render("Pont: " + str(jatek.pont), True, BLACK)
-    text_game_over = font1.render("Game Over", True, (255, 125, 0))
-    text_game_over1 = font1.render("Press ESC", True, (255, 215, 0))
+    #Forgatás
+    forgoPont = Figura[0]
+    regi_Figura = deepcopy(Figura)
+    if forgass:
+        for i in range(4):
+            x = Figura[i].y - forgoPont.y
+            y = Figura[i].x - forgoPont.x
+            Figura[i].x = forgoPont.x - x
+            Figura[i].y = forgoPont.y + y
+            if not hitboxChech():
+                Figura = deepcopy(regi_Figura)
+                break
+    # Egész sor törlése
+    vonal = M-1
+    for sor in range(M -1,-1,-1):
+        szamlalo = 0
+        for i in range(Sz):
+            if Mezo[sor][i]:
+                szamlalo +=1
+            Mezo[vonal][i] = Mezo[sor][i]
+        if szamlalo < Sz:
+            vonal -=1
+            Pont += 1
+    
+    #A grid kirajzolása: (Kijelző, (RGB szinek), i az maga a létrehozott grid ek tulajdonságai, milyne vastag a border)
+    [pygame.draw.rect(GAME, (50,50,50), i , 1) for i in grid]         
 
-    screen.blit(text, [0, 0])
-    if jatek.state == "gameover":
-        screen.blit(text_game_over, [20, 200])
-        screen.blit(text_game_over1, [25, 265])
+    #Jelenleg eső figura rajzolása
+    for i in range(4):
+        FiguraNegyzet.x = Figura[i].x * Csempe
+        FiguraNegyzet.y = Figura[i].y * Csempe
+        pygame.draw.rect(GAME, color, FiguraNegyzet)
 
+    #A befagyott figurák rajzolása
+    for y, raw in enumerate(Mezo):
+        for x, col in enumerate(raw):
+            if col:
+                FiguraNegyzet.x, FiguraNegyzet.y = x * Csempe, y * Csempe
+                pygame.draw.rect(GAME, col, FiguraNegyzet)
+
+    # GAME OVER
+    for i in range(Sz):
+        if Mezo[0][i]:
+            Mezo = [[0 for i in range(Sz)] for j in range (M)]
+            animSzam, animSebesseg, animLimit = 0 ,8, 2000
+            Pont = 0
+            for j in grid:
+                pygame.draw.rect(GAME, getColor(), j)
+                pygame.display.flip()
+                clock.tick(200)
+            pygame.time.delay(3000)
     pygame.display.flip()
-    ora.tick(fps)
+    clock.tick()
 
-pygame.quit()
