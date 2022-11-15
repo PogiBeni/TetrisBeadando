@@ -1,3 +1,5 @@
+import subprocess
+subprocess.call(['pip', 'install', 'pygame'])
 import pygame
 from copy import deepcopy
 from random import choice, randrange
