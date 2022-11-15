@@ -3,22 +3,20 @@ from copy import deepcopy
 from random import choice, randrange
 
 ############################################
-# A játékmező 10 * 50 pixel Széles és 20 * 50 pixel magas lesz
+# A játékmező 
 Sz,M = 10,20
-Csempe = 45
-GAME_RES = Sz * Csempe, M * Csempe
+Csempe = 40
+GAME_RES = Sz * Csempe, (M + 1) * Csempe
 ############################################
 FPS = 60
 
 pygame.init()
 
 pygame.display.set_caption('Tetris')
-############################################
 #Ez az ablak ami megnyílik egy változó ként
-GAME = pygame.display.set_mode(GAME_RES) 
-###########################################
+GAME = pygame.display.set_mode(GAME_RES)
 clock = pygame.time.Clock()
-
+font = pygame.font.Font('font.ttf', Csempe-10)
 
 FigurakKoordinatai = [  [(-1, 0), (-2, 0), (0, 0), (1, 0)],
                         [(0, -1), (-1, -1), (-1, 0), (0, 0)],
@@ -36,8 +34,10 @@ Figura =  deepcopy(choice(Figurak))
 
 
 Pont = 0
+Pontok = {0: 0, 1: 100, 2: 300, 3: 700, 4: 1500}
 getColor = lambda : (randrange(30,256), randrange(30,256), randrange(30,256) )
 color = getColor()
+
 
 
 #A grid létrehozása változóként, (x = oszop, y = sor, Szelesség, Magasság)
@@ -50,6 +50,8 @@ def hitboxChech():
         return False
     return True
 
+
+PontokText = font.render('Pontok:', True, getColor())
 
 while True:
     mozgasX, forgass = 0, False
@@ -101,7 +103,7 @@ while True:
                 Figura = deepcopy(regi_Figura)
                 break
     # Egész sor törlése
-    vonal = M-1
+    vonal,vonalak = M-1, 0
     for sor in range(M -1,-1,-1):
         szamlalo = 0
         for i in range(Sz):
@@ -110,8 +112,10 @@ while True:
             Mezo[vonal][i] = Mezo[sor][i]
         if szamlalo < Sz:
             vonal -=1
-            Pont += 1
+        else:
+            vonalak += 1
     
+    Pont += Pontok[vonalak]
     #A grid kirajzolása: (Kijelző, (RGB szinek), i az maga a létrehozott grid ek tulajdonságai, milyne vastag a border)
     [pygame.draw.rect(GAME, (50,50,50), i , 1) for i in grid]         
 
@@ -127,7 +131,8 @@ while True:
             if col:
                 FiguraNegyzet.x, FiguraNegyzet.y = x * Csempe, y * Csempe
                 pygame.draw.rect(GAME, col, FiguraNegyzet)
-
+    GAME.blit(PontokText, (10,M*Csempe-(Csempe*0.2)))
+    GAME.blit(font.render(str(Pont), True, pygame.Color('white')), (4*Csempe,M*Csempe-(Csempe*0.2)))
     # GAME OVER
     for i in range(Sz):
         if Mezo[0][i]:
